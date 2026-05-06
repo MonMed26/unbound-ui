@@ -2,8 +2,10 @@ package unbound
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -87,9 +89,15 @@ func (cm *ConfigManager) WriteConfig(raw string) error {
 
 // ValidateConfig runs unbound-checkconf on the config
 func (cm *ConfigManager) ValidateConfig() error {
-	control := NewControl("")
-	_, err := control.exec("checkconf", cm.ConfigPath)
-	return err
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "unbound-checkconf", cm.ConfigPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s", strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 // backup creates a timestamped backup of the current config
