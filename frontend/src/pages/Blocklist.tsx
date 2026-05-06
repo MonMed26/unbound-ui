@@ -38,7 +38,7 @@ export default function Blocklist() {
     queryKey: ['blocklist-sources'],
     queryFn: async () => {
       const { data } = await blocklistApi.getSources()
-      return data
+      return data || []
     },
   })
 

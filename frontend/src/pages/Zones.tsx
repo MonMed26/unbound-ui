@@ -23,7 +23,7 @@ export default function Zones() {
     queryKey: ['zones'],
     queryFn: async () => {
       const { data } = await zonesApi.list()
-      return data
+      return data || []
     },
   })
 
@@ -31,7 +31,7 @@ export default function Zones() {
     queryKey: ['zoneData'],
     queryFn: async () => {
       const { data } = await zonesApi.listData()
-      return data
+      return data || []
     },
   })
 

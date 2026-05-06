@@ -62,6 +62,9 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Persist auth config to disk
+	s.notifyAuthChange()
+
 	// Generate token for immediate login
 	token, err := s.auth.Login(req.Username, req.Password)
 	if err != nil {

@@ -34,6 +34,7 @@ type AppConfig struct {
 
 func main() {
 	cfg := loadConfig()
+	originalJWTSecret := cfg.Auth.JWTSecret
 
 	server := api.NewServer(&api.Config{
 		Auth:          &cfg.Auth,
@@ -47,8 +48,15 @@ func main() {
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Unbound UI starting on http://%s", addr)
 
-	// Save updated auth config (in case JWT secret was generated)
-	saveConfig(cfg, server)
+	// Only save config if JWT secret was newly generated
+	if originalJWTSecret == "" {
+		saveConfig(cfg, server)
+	}
+
+	// Register a callback so config is saved after setup/auth changes
+	server.OnAuthChange(func() {
+		saveConfig(cfg, server)
+	})
 
 	if err := http.ListenAndServe(addr, server); err != nil {
 		log.Fatalf("Server failed: %v", err)

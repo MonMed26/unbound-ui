@@ -14,12 +14,13 @@ import (
 )
 
 type Server struct {
-	router     chi.Router
-	auth       *auth.Service
-	control    *unbound.Control
-	configMgr  *unbound.ConfigManager
-	blocklist  *blocklist.Manager
-	frontendFS embed.FS
+	router       chi.Router
+	auth         *auth.Service
+	control      *unbound.Control
+	configMgr    *unbound.ConfigManager
+	blocklist    *blocklist.Manager
+	frontendFS   embed.FS
+	onAuthChange func()
 }
 
 type Config struct {
@@ -157,4 +158,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) GetAuthConfig() *auth.Config {
 	return s.auth.GetConfig()
+}
+
+func (s *Server) OnAuthChange(fn func()) {
+	s.onAuthChange = fn
+}
+
+func (s *Server) notifyAuthChange() {
+	if s.onAuthChange != nil {
+		s.onAuthChange()
+	}
 }
