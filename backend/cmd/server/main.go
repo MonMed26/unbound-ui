@@ -1,0 +1,124 @@
+package main
+
+import (
+	"embed"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/unbound-ui/backend/internal/api"
+	"github.com/unbound-ui/backend/internal/auth"
+	"gopkg.in/yaml.v3"
+)
+
+//go:embed all:frontend/dist
+var frontendFS embed.FS
+
+type AppConfig struct {
+	Server struct {
+		Port int    `yaml:"port"`
+		Host string `yaml:"host"`
+	} `yaml:"server"`
+	Unbound struct {
+		ConfigPath  string `yaml:"config_path"`
+		ControlPath string `yaml:"control_path"`
+	} `yaml:"unbound"`
+	Auth auth.Config `yaml:"auth"`
+	Blocklist struct {
+		DataDir        string `yaml:"data_dir"`
+		OutputPath     string `yaml:"output_path"`
+		UpdateInterval string `yaml:"update_interval"`
+	} `yaml:"blocklist"`
+}
+
+func main() {
+	cfg := loadConfig()
+
+	server := api.NewServer(&api.Config{
+		Auth:          &cfg.Auth,
+		UnboundConfig: cfg.Unbound.ConfigPath,
+		ControlPath:   cfg.Unbound.ControlPath,
+		BlocklistDir:  cfg.Blocklist.DataDir,
+		BlocklistOut:  cfg.Blocklist.OutputPath,
+		FrontendFS:    frontendFS,
+	})
+
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	log.Printf("Unbound UI starting on http://%s", addr)
+
+	// Save updated auth config (in case JWT secret was generated)
+	saveConfig(cfg, server)
+
+	if err := http.ListenAndServe(addr, server); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+}
+
+func loadConfig() *AppConfig {
+	cfg := &AppConfig{}
+
+	// Defaults
+	cfg.Server.Port = 8080
+	cfg.Server.Host = "0.0.0.0"
+	cfg.Unbound.ConfigPath = "/etc/unbound/unbound.conf"
+	cfg.Unbound.ControlPath = "unbound-control"
+	cfg.Blocklist.DataDir = "/var/lib/unbound-ui/blocklist"
+	cfg.Blocklist.OutputPath = "/etc/unbound/unbound.conf.d/blocklist.conf"
+	cfg.Blocklist.UpdateInterval = "6h"
+
+	// Try to load config file
+	configPaths := []string{
+		"config.yaml",
+		"/etc/unbound-ui/config.yaml",
+	}
+
+	for _, path := range configPaths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		if err := yaml.Unmarshal(data, cfg); err != nil {
+			log.Printf("Warning: failed to parse %s: %v", path, err)
+			continue
+		}
+		log.Printf("Loaded config from %s", path)
+		break
+	}
+
+	// Override with environment variables
+	if port := os.Getenv("UNBOUND_UI_PORT"); port != "" {
+		fmt.Sscanf(port, "%d", &cfg.Server.Port)
+	}
+	if host := os.Getenv("UNBOUND_UI_HOST"); host != "" {
+		cfg.Server.Host = host
+	}
+	if path := os.Getenv("UNBOUND_CONFIG_PATH"); path != "" {
+		cfg.Unbound.ConfigPath = path
+	}
+	if path := os.Getenv("UNBOUND_CONTROL_PATH"); path != "" {
+		cfg.Unbound.ControlPath = path
+	}
+
+	return cfg
+}
+
+func saveConfig(cfg *AppConfig, server *api.Server) {
+	// Update auth config with potentially new JWT secret
+	authCfg := server.GetAuthConfig()
+	cfg.Auth = *authCfg
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return
+	}
+
+	// Try to save to first writable location
+	paths := []string{"config.yaml", "/etc/unbound-ui/config.yaml"}
+	for _, path := range paths {
+		if err := os.WriteFile(path, data, 0600); err == nil {
+			log.Printf("Saved config to %s", path)
+			return
+		}
+	}
+}

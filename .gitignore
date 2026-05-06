@@ -1,0 +1,31 @@
+# Dependencies
+frontend/node_modules/
+backend/vendor/
+
+# Build output
+frontend/dist/
+backend/cmd/server/frontend/
+bin/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+config.yaml
+!backend/config.yaml
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Env
+.env
+.env.local

@@ -1,0 +1,18 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+unbound:
+  config_path: "/etc/unbound/unbound.conf"
+  control_path: "unbound-control"
+
+auth:
+  username: ""
+  password_hash: ""
+  jwt_secret: ""
+  session_ttl: "24h"
+
+blocklist:
+  data_dir: "/var/lib/unbound-ui/blocklist"
+  output_path: "/etc/unbound/unbound.conf.d/blocklist.conf"
+  update_interval: "6h"
