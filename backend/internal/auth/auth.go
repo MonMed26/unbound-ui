@@ -19,10 +19,11 @@ var (
 )
 
 type Config struct {
-	Username     string `yaml:"username"`
-	PasswordHash string `yaml:"password_hash"`
-	JWTSecret    string `yaml:"jwt_secret"`
-	SessionTTL   string `yaml:"session_ttl"`
+	Username      string `yaml:"username"`
+	PasswordHash  string `yaml:"password_hash"`
+	JWTSecret     string `yaml:"jwt_secret"`
+	SessionTTL    string `yaml:"session_ttl"`
+	ResetPassword string `yaml:"-" json:"-"` // Not persisted, only via env var
 }
 
 type Service struct {
@@ -32,6 +33,14 @@ type Service struct {
 func NewService(cfg *Config) *Service {
 	if cfg.JWTSecret == "" {
 		cfg.JWTSecret = generateSecret()
+	}
+	// Handle password reset via env var
+	if cfg.ResetPassword != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(cfg.ResetPassword), bcrypt.DefaultCost)
+		if err == nil {
+			cfg.PasswordHash = string(hash)
+		}
+		cfg.ResetPassword = "" // Clear after use
 	}
 	return &Service{config: cfg}
 }

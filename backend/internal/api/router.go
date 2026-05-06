@@ -126,6 +126,9 @@ func (s *Server) serveFrontend(r chi.Router) {
 
 	fileServer := http.FileServer(http.FS(subFS))
 
+	// Read index.html once for SPA fallback
+	indexHTML, _ := fs.ReadFile(subFS, "index.html")
+
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		// Try to serve the file directly
 		path := r.URL.Path
@@ -133,12 +136,13 @@ func (s *Server) serveFrontend(r chi.Router) {
 			path = "/index.html"
 		}
 
-		// Check if file exists
+		// Check if file exists in the embedded FS
 		f, err := subFS.Open(path[1:]) // Remove leading /
 		if err != nil {
 			// File not found, serve index.html for SPA routing
-			r.URL.Path = "/"
-			fileServer.ServeHTTP(w, r)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			w.Write(indexHTML)
 			return
 		}
 		f.Close()

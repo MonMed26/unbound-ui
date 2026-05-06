@@ -1,0 +1,13 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - img [ref=e8]
+    - heading "Unbound UI" [level=1] [ref=e10]
+    - paragraph [ref=e11]: Sign in to manage your DNS server
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - text: Username
+      - textbox "admin" [ref=e14]
+    - generic [ref=e15]:
+      - text: Password
+      - textbox "Enter your password" [ref=e16]
+    - button "Sign In" [ref=e17]
